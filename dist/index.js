@@ -1,5 +1,6 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { ListToolsRequestSchema, CallToolRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
 import express from "express";
 import { exec } from "child_process";
 import { promisify } from "util";
@@ -19,7 +20,7 @@ const mcpServer = new Server({
     },
 });
 // 注册工具列表
-mcpServer.setRequestHandler("tools/list", async () => {
+mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
         tools: [
             {
@@ -103,7 +104,7 @@ mcpServer.setRequestHandler("tools/list", async () => {
     };
 });
 // 实现工具调用
-mcpServer.setRequestHandler("tools/call", async (request) => {
+mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     // 检查待处理任务
     if (name === "check_pending_tasks") {
