@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build output
+dist/
+*.js
+*.js.map
+!src/**/*.ts
+
+# Logs
+*.log
+logs/
+/tmp/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Result files (user-specific)
+data/cursor-results/
+
+# Local test files
+hello-world.js
+hello.js
+test.js
+README-TEST.md
+CURSOR_TEST_TASK.md
