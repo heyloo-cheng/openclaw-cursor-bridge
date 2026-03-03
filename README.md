@@ -59,7 +59,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/YOUR_USERNAME/openclaw-cursor-bridge.git
+git clone https://github.com/heyloo-cheng/openclaw-cursor-bridge.git
 cd openclaw-cursor-bridge
 
 # 安装依赖
@@ -358,8 +358,8 @@ MIT License - 详见 [LICENSE](./LICENSE)
 ## 📞 支持
 
 - 📖 [文档](./docs/)
-- 🐛 [问题反馈](https://github.com/YOUR_USERNAME/openclaw-cursor-bridge/issues)
-- 💬 [讨论区](https://github.com/YOUR_USERNAME/openclaw-cursor-bridge/discussions)
+- 🐛 [问题反馈](https://github.com/heyloo-cheng/openclaw-cursor-bridge/issues)
+- 💬 [讨论区](https://github.com/heyloo-cheng/openclaw-cursor-bridge/discussions)
 
 ---
 
