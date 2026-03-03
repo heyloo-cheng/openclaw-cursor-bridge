@@ -8,7 +8,7 @@
 
 如果你发现了 bug，请：
 
-1. 检查 [Issues](https://github.com/YOUR_USERNAME/openclaw-cursor-bridge/issues) 是否已有相关报告
+1. 检查 [Issues](https://github.com/heyloo-cheng/openclaw-cursor-bridge/issues) 是否已有相关报告
 2. 如果没有，创建新 Issue，包含：
    - 清晰的标题
    - 详细的问题描述
@@ -19,7 +19,7 @@
 
 ### 提出新功能
 
-1. 先在 [Discussions](https://github.com/YOUR_USERNAME/openclaw-cursor-bridge/discussions) 讨论
+1. 先在 [Discussions](https://github.com/heyloo-cheng/openclaw-cursor-bridge/discussions) 讨论
 2. 说明功能的用途和价值
 3. 如果获得认可，创建 Feature Request Issue
 
@@ -27,7 +27,7 @@
 
 1. **Fork 仓库**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/openclaw-cursor-bridge.git
+   git clone https://github.com/heyloo-cheng/openclaw-cursor-bridge.git
    cd openclaw-cursor-bridge
    ```
 
@@ -173,8 +173,8 @@ PR 会经过以下审查：
 
 ## 💬 交流
 
-- 💬 [Discussions](https://github.com/YOUR_USERNAME/openclaw-cursor-bridge/discussions) - 讨论功能和想法
-- 🐛 [Issues](https://github.com/YOUR_USERNAME/openclaw-cursor-bridge/issues) - 报告 bug 和请求功能
+- 💬 [Discussions](https://github.com/heyloo-cheng/openclaw-cursor-bridge/discussions) - 讨论功能和想法
+- 🐛 [Issues](https://github.com/heyloo-cheng/openclaw-cursor-bridge/issues) - 报告 bug 和请求功能
 - 📧 Email - your-email@example.com
 
 ## 📜 行为准则
