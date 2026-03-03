@@ -8,8 +8,13 @@ import express from "express";
 import { exec } from "child_process";
 import { promisify } from "util";
 import fs from "fs/promises";
+import path from "path";
+import os from "os";
 
 const execAsync = promisify(exec);
+
+// 结果目录（兼容旧工作流）
+const RESULT_DIR = path.join(os.homedir(), ".openclaw/workspace/data/cursor-results");
 
 // ============================================
 // 任务队列类型定义
@@ -24,10 +29,111 @@ interface Task {
   error?: string;
   createdAt: string;
   updatedAt: string;
+  feishuTarget?: string;  // 飞书通知目标
+  workdir?: string;       // 工作目录
 }
 
 // 任务队列
 const taskQueue: Task[] = [];
+
+// 初始化结果目录
+async function initResultDir() {
+  try {
+    await fs.mkdir(RESULT_DIR, { recursive: true });
+  } catch (error) {
+    console.error("Failed to create result directory:", error);
+  }
+}
+
+// 保存任务元数据（兼容旧工作流格式）
+async function saveTaskMeta(task: Task) {
+  try {
+    const meta = {
+      task_name: task.id,
+      feishu_target: task.feishuTarget || "",
+      prompt: task.payload.description || "",
+      workdir: task.workdir || "",
+      output_file: "TASK_REPORT.md",
+      started_at: task.createdAt,
+      completed_at: task.status === "completed" ? task.updatedAt : null,
+      status: task.status,
+    };
+    
+    await fs.writeFile(
+      path.join(RESULT_DIR, "task-meta.json"),
+      JSON.stringify(meta, null, 2)
+    );
+  } catch (error) {
+    console.error("Failed to save task meta:", error);
+  }
+}
+
+// 保存最新结果（兼容旧工作流格式）
+async function saveLatestResult(task: Task) {
+  try {
+    const result = {
+      timestamp: task.updatedAt,
+      task_name: task.id,
+      feishu_target: task.feishuTarget || "",
+      workdir: task.workdir || "",
+      output: task.result || "",
+      source: "cursor-mcp",
+      status: task.status,
+    };
+    
+    await fs.writeFile(
+      path.join(RESULT_DIR, "latest.json"),
+      JSON.stringify(result, null, 2)
+    );
+  } catch (error) {
+    console.error("Failed to save latest result:", error);
+  }
+}
+
+// 保存待唤醒通知（兼容旧工作流格式）
+async function savePendingWake(task: Task) {
+  try {
+    const wake = {
+      task_name: task.id,
+      feishu_target: task.feishuTarget || "",
+      timestamp: task.updatedAt,
+      summary: (task.result || "").substring(0, 500),
+      source: "cursor-mcp",
+      processed: false,
+    };
+    
+    await fs.writeFile(
+      path.join(RESULT_DIR, "pending-wake.json"),
+      JSON.stringify(wake, null, 2)
+    );
+  } catch (error) {
+    console.error("Failed to save pending wake:", error);
+  }
+}
+
+// 发送飞书通知
+async function sendFeishuNotification(task: Task) {
+  if (!task.feishuTarget) return;
+  
+  try {
+    const summary = (task.result || "").substring(0, 800);
+    const message = `🖥️ Cursor MCP 任务完成
+📋 任务: ${task.id}
+📝 类型: ${task.type}
+✅ 状态: ${task.status}
+📝 结果摘要:
+${summary}`;
+
+    // 调用 openclaw message send
+    await execAsync(
+      `openclaw message send --channel feishu --target "${task.feishuTarget}" --message "${message.replace(/"/g, '\\"')}"`
+    );
+    
+    console.log(`✅ Sent Feishu notification to ${task.feishuTarget}`);
+  } catch (error) {
+    console.error("Failed to send Feishu notification:", error);
+  }
+}
 
 // ============================================
 // 1. MCP Server (与 Cursor 通信)
@@ -238,6 +344,14 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
     task.result = result;
     task.updatedAt = new Date().toISOString();
 
+    // 保存结果到文件（兼容旧工作流）
+    await saveTaskMeta(task);
+    await saveLatestResult(task);
+    await savePendingWake(task);
+
+    // 发送飞书通知
+    await sendFeishuNotification(task);
+
     // 通知 OpenClaw（通过 HTTP 回调）
     if (task.payload.callbackUrl) {
       try {
@@ -264,7 +378,7 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
       content: [
         {
           type: "text",
-          text: `✅ Result reported to OpenClaw for task ${taskId}`,
+          text: `✅ Result reported to OpenClaw for task ${taskId}\n📁 Results saved to ${RESULT_DIR}\n${task.feishuTarget ? `📱 Feishu notification sent to ${task.feishuTarget}` : ""}`,
         },
       ],
     };
@@ -356,8 +470,8 @@ app.get("/health", (req, res) => {
 });
 
 // 创建任务（OpenClaw 调用）
-app.post("/tasks", (req, res) => {
-  const { type, payload } = req.body;
+app.post("/tasks", async (req, res) => {
+  const { type, payload, feishuTarget, workdir } = req.body;
 
   if (!type || !payload) {
     return res.status(400).json({ error: "Missing type or payload" });
@@ -370,9 +484,14 @@ app.post("/tasks", (req, res) => {
     status: "pending",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    feishuTarget: feishuTarget || payload.feishuTarget,
+    workdir: workdir || payload.workdir,
   };
 
   taskQueue.push(task);
+
+  // 保存任务元数据
+  await saveTaskMeta(task);
 
   res.json({
     success: true,
@@ -448,9 +567,13 @@ app.post("/cursor/open-file", async (req, res) => {
 
 // 启动 HTTP 服务器
 const PORT = process.env.PORT || 3000;
-const httpServer = app.listen(PORT, () => {
+const httpServer = app.listen(PORT, async () => {
   console.error(`✅ HTTP API listening on port ${PORT}`);
   console.error(`📡 Health check: http://localhost:${PORT}/health`);
+  console.error(`📁 Result directory: ${RESULT_DIR}`);
+  
+  // 初始化结果目录
+  await initResultDir();
 });
 
 // ============================================
