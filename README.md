@@ -8,6 +8,8 @@
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 
+> 🎉 **New**: [OpenClaw Plugin Integration](./OPENCLAW_PLUGIN.md) - Use Cursor directly from OpenClaw conversations with `cursor_execute` tool!
+
 ---
 
 ## ✨ 特性
