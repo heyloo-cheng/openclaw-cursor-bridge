@@ -30,7 +30,8 @@ interface Task {
   createdAt: string;
   updatedAt: string;
   feishuTarget?: string;  // 飞书通知目标
-  workdir?: string;       // 工作目录
+  workdir?: string;      // 工作目录
+  source?: string;       // 任务来源: 'feishu' | 'cli' | 'api'
 }
 
 // 任务队列
@@ -113,7 +114,16 @@ async function savePendingWake(task: Task) {
 
 // 发送飞书通知
 async function sendFeishuNotification(task: Task) {
-  if (!task.feishuTarget) return;
+  // 只对飞书来源的任务发送通知
+  if (task.source !== 'feishu') {
+    console.log(`ℹ️  Task ${task.id} source is '${task.source}', skipping Feishu notification`);
+    return;
+  }
+  
+  if (!task.feishuTarget) {
+    console.log(`ℹ️  Task ${task.id} has no feishuTarget, skipping notification`);
+    return;
+  }
   
   try {
     const summary = (task.result || "").substring(0, 800);
@@ -471,10 +481,26 @@ app.get("/health", (req, res) => {
 
 // 创建任务（OpenClaw 调用）
 app.post("/tasks", async (req, res) => {
-  const { type, payload, feishuTarget, workdir } = req.body;
+  const { type, payload, feishuTarget, workdir, source } = req.body;
 
   if (!type || !payload) {
     return res.status(400).json({ error: "Missing type or payload" });
+  }
+
+  // 自动检测任务来源
+  // - 如果有 feishuTarget 且是通过飞书发送的 → feishu
+  // - 如果请求头包含 feishu 相关标识 → feishu
+  // - 否则 → cli 或 api
+  let taskSource = source || 'cli';
+  if (!taskSource || taskSource === 'cli') {
+    // 检查请求是否来自飞书（通过 header 或 feishuTarget 判断）
+    const isFromFeishu = feishuTarget || 
+                         payload?.feishuTarget ||
+                         req.headers['x-feishu-from'] === 'true' ||
+                         req.headers['x-source'] === 'feishu';
+    if (isFromFeishu) {
+      taskSource = 'feishu';
+    }
   }
 
   const task: Task = {
@@ -486,6 +512,7 @@ app.post("/tasks", async (req, res) => {
     updatedAt: new Date().toISOString(),
     feishuTarget: feishuTarget || payload.feishuTarget,
     workdir: workdir || payload.workdir,
+    source: taskSource,
   };
 
   taskQueue.push(task);
@@ -493,9 +520,12 @@ app.post("/tasks", async (req, res) => {
   // 保存任务元数据
   await saveTaskMeta(task);
 
+  console.log(`📝 Task created: ${task.id} (source: ${task.source})`);
+
   res.json({
     success: true,
     taskId: task.id,
+    source: task.source,
     message: "Task created. Cursor will be notified.",
   });
 });
